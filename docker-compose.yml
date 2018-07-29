@@ -1,0 +1,76 @@
+version: '2'
+services:
+  # Redis Database
+  redis:
+      image: redis:4.0.5-alpine
+      ports:
+        - "6382:6379"
+
+  # The Application
+  app:
+    build:
+      context: ./
+      dockerfile: docker/php-fpm/Dockerfile
+    working_dir: /var/www
+    volumes:
+      - ./:/var/www
+    environment:
+      - "DB_PORT=3306"
+      - "DB_HOST=database"
+      - "DB_DATABASE=feytdev"
+      - "DB_USER=root"
+      - "DB_PASSWORD=feyt_strong_pass"
+      - "MAILER_TRANSPORT=gmail"
+      - "MAILER_HOST=smtp.gmail.com"
+      - "MAILER_USER=basesf.feyt@gmail.com"
+      - "MAILER_PASSWORD=bybzqnfkgvygdkhf"
+      - "SECRET=42c8142ac40bac89e58281e6302a18b3477e6e8e"
+      - "KNP_BINARY=/usr/local/bin/wkhtmltopdf"
+      - "ASSETS_VERSION=v1"
+      - "REDIS_DB_HOST=redis"
+      - "REDIS_DB_PORT=6379"
+      - "REDIS_DOCTRINE_PORT=6380"
+      - "SCHEME_AND_HOST=http://sistema.feyt.com.ec"
+      - "APP_HOST=localhost"
+
+  # The Web Server
+  web:
+    build:
+      context: ./
+      dockerfile: docker/nginx/Dockerfile
+    working_dir: /var/www
+    volumes_from:
+      - app
+    ports:
+      - 8082:80
+    links:
+      - redis
+
+  # The Database
+  database:
+    image: mysql:5.7
+    volumes:
+      - dbdata:/var/lib/mysql
+    environment:
+      - "MYSQL_DATABASE=feytdev"
+      - "MYSQL_USER=root"
+      - "MYSQL_PASSWORD=feyt_strong_pass"
+      - "MYSQL_ROOT_PASSWORD=feyt_strong_pass"
+    ports:
+        - "33062:3306"
+
+  # The phpmyadmin to manage DB
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    links:
+      - database:mysql
+    ports:
+      - 8184:80
+    environment:
+      MYSQL_USERNAME: feyt_root
+      MYSQL_ROOT_PASSWORD: feyt_strong_pass
+      PMA_HOST: database
+
+volumes:
+  dbdata:
+  redis_data:
